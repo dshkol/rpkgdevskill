@@ -1,0 +1,90 @@
+---
+title: "Getting Started with fullpkg"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting Started with fullpkg}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+## Introduction
+
+The fullpkg package provides simple tools for basic text analysis. This vignette
+demonstrates the main workflow: tokenizing text, counting words, and calculating
+statistics.
+
+## Setup
+
+```{r setup}
+library(fullpkg)
+```
+
+## Tokenizing Text
+
+The first step in any text analysis is to break the text into individual words.
+Use `tokenize()` for this:
+```{r tokenize}
+text <- "The quick brown fox jumps over the lazy dog."
+tokens <- tokenize(text)
+tokens
+```
+
+By default, `tokenize()` converts text to lowercase. You can disable this:
+
+```{r tokenize-case}
+tokenize("Hello World", lowercase = FALSE)
+```
+
+## Counting Word Frequencies
+
+Once you have tokens, you can count how often each word appears:
+
+```{r count}
+counts <- count_words(tokens)
+counts
+```
+
+## Calculating Statistics
+
+For a quick summary of your text, use `word_stats()`:
+
+```{r stats}
+stats <- word_stats(tokens)
+stats
+```
+
+The statistics include:
+
+- **total_words**: Total number of words in the text
+- **unique_words**: Number of distinct words
+- **avg_word_length**: Average length of words
+- **lexical_diversity**: Ratio of unique to total words (higher = more diverse)
+
+## Working with Multiple Texts
+
+All functions work with multiple texts:
+
+```{r multiple}
+texts <- c(
+  "R is a great language for data analysis.",
+  "Data science is fun and rewarding."
+)
+
+tokens <- tokenize(texts)
+count_words(tokens)
+```
+
+## Next Steps
+
+See the function documentation for more details:
+
+- `?tokenize`
+- `?count_words`
+- `?word_stats`
