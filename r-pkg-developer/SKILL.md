@@ -1,6 +1,6 @@
 ---
 name: r-pkg-developer
-description: Develop R packages following best practices with devtools, roxygen2, and testthat. Use when creating new R packages, adding functions to packages, writing documentation, creating tests, managing dependencies, building vignettes, or preparing for CRAN submission. Triggers on R package development tasks, DESCRIPTION file editing, roxygen2 documentation, testthat testing, or R CMD check issues.
+description: Develop R packages following best practices with devtools, roxygen2, and testthat. Use when creating new R packages, adding functions to packages, writing documentation, creating tests, managing dependencies, building vignettes, creating package websites with pkgdown, or preparing for CRAN submission. Triggers on R package development tasks, DESCRIPTION file editing, roxygen2 documentation, testthat testing, pkgdown website setup, or R CMD check issues.
 ---
 
 # R Package Developer
@@ -25,6 +25,8 @@ mypackage/
 ├── data-raw/            # Data preparation scripts
 ├── inst/extdata/        # Raw data files (CSV, JSON, etc.)
 ├── vignettes/           # Long-form documentation (.Rmd)
+├── _pkgdown.yml         # Optional: website configuration
+├── docs/                # Generated website (if building locally)
 ├── .Rbuildignore        # Files to exclude from package
 └── .gitignore           # Files to exclude from git
 ```
@@ -152,6 +154,7 @@ test_that("function handles edge cases", {
 | New R file | `usethis::use_r("name")` | |
 | New test | `usethis::use_test("name")` | |
 | Add dependency | `usethis::use_package("pkg")` | |
+| Setup website | `usethis::use_pkgdown_github_pages()` | |
 | View help | `?function_name` | |
 
 ## Detailed References
@@ -164,6 +167,7 @@ Consult these files for comprehensive guidance on specific topics:
 - **Dependencies**: See [references/dependencies.md](references/dependencies.md) for Imports vs Suggests, NAMESPACE
 - **Data**: See [references/data.md](references/data.md) for including datasets
 - **Vignettes**: See [references/vignettes.md](references/vignettes.md) for long-form documentation
+- **Website**: See [references/pkgdown.md](references/pkgdown.md) for pkgdown setup and customization
 - **R CMD check**: See [references/check.md](references/check.md) for fixing errors and warnings
 
 ## Common Tasks
@@ -187,6 +191,16 @@ usethis::use_data_raw("dataset_name")
 usethis::use_git()
 usethis::use_github()
 usethis::use_github_action_check_standard()
+```
+
+### Add Package Website (Optional)
+```r
+# Recommended: Auto-deploy to GitHub Pages
+usethis::use_pkgdown_github_pages()
+
+# Or manual setup
+usethis::use_pkgdown()
+pkgdown::build_site()  # Preview locally
 ```
 
 ### Prepare for CRAN
