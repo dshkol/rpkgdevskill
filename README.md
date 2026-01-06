@@ -11,6 +11,7 @@ When activated, this skill helps Claude assist with:
 - Setting up and running testthat tests
 - Managing package dependencies
 - Building vignettes
+- Creating package websites with pkgdown (optional)
 - Preparing packages for CRAN submission
 - Fixing R CMD check errors and warnings
 
@@ -40,6 +41,7 @@ Then restart Claude Code to load the skill.
 - `dependencies.md` - Imports vs Suggests, NAMESPACE management
 - `data.md` - Including datasets in packages
 - `vignettes.md` - Long-form documentation
+- `pkgdown.md` - Package website generation
 - `check.md` - Fixing R CMD check issues
 
 ### Test Packages (`test-packages/`)
@@ -48,7 +50,7 @@ Example packages demonstrating skill capabilities:
 - `stringhelpers` - String manipulation functions
 - `datapkg` - Package with included datasets
 - `tidyhelpers` - Functions using tidy evaluation
-- `fullpkg` - Complete package with vignettes
+- `fullpkg` - Complete package with vignettes and pkgdown config
 
 ## Usage
 
@@ -59,15 +61,17 @@ The skill triggers automatically when Claude detects R package development tasks
 - Working with testthat tests
 - Running R CMD check
 - Managing package dependencies
+- Setting up pkgdown websites
 
 ## Key Workflow Commands
 
 ```r
-usethis::create_package("mypackage")  # Create package
-devtools::load_all()                   # Load for testing
-devtools::document()                   # Generate docs
-devtools::test()                       # Run tests
-devtools::check()                      # Check package
+usethis::create_package("mypackage")       # Create package
+devtools::load_all()                       # Load for testing
+devtools::document()                       # Generate docs
+devtools::test()                           # Run tests
+devtools::check()                          # Check package
+usethis::use_pkgdown_github_pages()        # Setup website (optional)
 ```
 
 ## License
