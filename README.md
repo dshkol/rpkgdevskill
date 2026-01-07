@@ -49,8 +49,8 @@ Example packages demonstrating skill capabilities:
 - `mathutils` - Basic numeric utility functions
 - `stringhelpers` - String manipulation functions
 - `datapkg` - Package with included datasets
-- `tidyhelpers` - Functions using tidy evaluation
-- `fullpkg` - Complete package with vignettes and pkgdown config
+- `tidyhelpers` - Functions using tidy evaluation (tidyverse style)
+- `fullpkg` - Complete package with vignettes and pkgdown config (base R style)
 
 ## Usage
 

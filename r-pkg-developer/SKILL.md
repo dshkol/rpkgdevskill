@@ -1,6 +1,6 @@
 ---
 name: r-pkg-developer
-description: Develop R packages following best practices with devtools, roxygen2, and testthat. Use when creating new R packages, adding functions to packages, writing documentation, creating tests, managing dependencies, building vignettes, creating package websites with pkgdown, or preparing for CRAN submission. Triggers on R package development tasks, DESCRIPTION file editing, roxygen2 documentation, testthat testing, pkgdown website setup, or R CMD check issues.
+description: Develop R packages following best practices with devtools, roxygen2, and testthat. Supports both tidyverse and base R coding styles. Use when creating new R packages, adding functions to packages, writing documentation, creating tests, managing dependencies, building vignettes, creating package websites with pkgdown, or preparing for CRAN submission. Triggers on R package development tasks, DESCRIPTION file editing, roxygen2 documentation, testthat testing, pkgdown website setup, or R CMD check issues.
 ---
 
 # R Package Developer
@@ -220,9 +220,11 @@ devtools::release()
 5. **Keep functions focused** - One function should do one thing well
 6. **Minimize dependencies** - Only add packages you truly need
 7. **Write helpful error messages** - Use `rlang::abort()` with clear descriptions
-8. **Follow tidyverse style** - Consistent naming: `snake_case` for functions and variables
+8. **Follow a consistent style** - Use `snake_case` for functions and variables
 
-## Handling NSE (Non-Standard Evaluation)
+## Handling NSE (If Using Tidyverse)
+
+> **Skip this section if using base R.** NSE handling is only needed when your package uses dplyr, tidyr, or other tidyverse packages that use non-standard evaluation.
 
 When using dplyr/tidyr in package code, you must handle column references carefully to pass R CMD check.
 
@@ -323,3 +325,41 @@ if (any(x == 0, na.rm = TRUE)) { ... }
 - **`warning()`**: Edge cases that produce valid but unexpected results
 
 Use `call. = FALSE` for cleaner error messages (omits the function call).
+
+## Base R Patterns
+
+If building a minimal-dependency package, these base R patterns avoid tidyverse dependencies.
+
+### Data Manipulation
+
+| Tidyverse | Base R Equivalent |
+|-----------|-------------------|
+| `dplyr::filter(df, x > 0)` | `df[df$x > 0, ]` or `subset(df, x > 0)` |
+| `dplyr::select(df, a, b)` | `df[, c("a", "b")]` |
+| `dplyr::mutate(df, y = x*2)` | `transform(df, y = x*2)` or `df$y <- df$x * 2` |
+| `purrr::map(x, fn)` | `lapply(x, fn)` |
+| `purrr::map_dbl(x, fn)` | `vapply(x, fn, numeric(1))` |
+
+### String Operations
+
+```r
+# Pattern matching
+grepl("pattern", x)
+gsub("old", "new", x)
+
+# Splitting
+strsplit(x, ",")[[1]]
+
+# Concatenation
+paste0("a", "b")
+sprintf("Value: %d", n)
+```
+
+### Advantages of Base R
+
+- Zero external dependencies
+- Stable across R versions
+- Easier CRAN maintenance
+- No NSE complexity
+
+See `test-packages/fullpkg/` for an example package using base R patterns.

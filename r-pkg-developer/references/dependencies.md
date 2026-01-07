@@ -1,5 +1,7 @@
 # Package Dependencies
 
+> **Style choice affects dependencies.** Base R packages have zero required dependencies. Tidyverse packages typically need `rlang` at minimum for NSE handling.
+
 ## Imports vs Suggests vs Depends
 
 | Field | When to Use | Installation | In Code |
