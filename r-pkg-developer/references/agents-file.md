@@ -48,7 +48,8 @@ Guidance for agents working **on** this package (not for users calling it).
 
 ## Constraints
 <!-- Facts from DESCRIPTION, not taste. These gate everything below. -->
-- R floor: R >= 4.1 (native pipe and `\()` available; `_` placeholder is not)
+- R floor: <from DESCRIPTION `Depends: R (>= x.y)`; e.g. R >= 4.1 means the
+  native pipe and `\()` are available but the `_` placeholder is not>
 - Dependency policy: <e.g. "tidyverse-flavored, rlang/cli allowed" OR
   "zero recursive dependencies — do NOT add to Imports/Depends">
 
@@ -103,6 +104,12 @@ Guidance for agents working **on** this package (not for users calling it).
   detected, say so when you create the file ("defaulting to base-R style because
   there are zero Imports — say the word to switch"). Visible and reversible
   beats a silent decision or a blocking prompt.
+- **Keep the core tight; link out depth.** `AGENTS.md` is loaded on every task,
+  so it is overhead until it prevents a mistake. Hold the always-read core to
+  roughly the skeleton above. When architecture notes or the Pitfalls section
+  grow past about a screen, move the detail into a linked reference doc (e.g.
+  `vignettes/`, a `dev/` note, or a `docs/` page) and leave a pointer — a long,
+  trusted file that gets skimmed is worse than a short one that gets read.
 
 ## The override mechanism
 

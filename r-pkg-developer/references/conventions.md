@@ -51,8 +51,9 @@ The skill is opinionated about the first two rows and silent on the third.
 
 ## R floor gates syntax (not a preference)
 
-Read `Depends: R (>= x.y)` from `DESCRIPTION` first. These features are
-unavailable below the version shown and using them is a bug, not a style choice:
+Read the package's declared floor — `Depends: R (>= x.y)` in `DESCRIPTION` —
+first. That declared value is the only thing that gates syntax; never assume a
+fixed number. The feature→version facts below are stable language facts:
 
 | Feature | Requires | Below the floor, use |
 |---------|----------|----------------------|
@@ -63,6 +64,12 @@ unavailable below the version shown and using them is a bug, not a style choice:
 
 When the floor is R 3.x, none of the above are available — `function()` and no
 native pipe.
+
+**Choosing a floor for a new package.** When greenfield has no declared floor to
+read, default to the *acknowledged community floor at the time of creation*
+rather than any number hard-coded here — the common convention is the current R
+release plus the previous few minor versions, and it drifts upward over time.
+Record the chosen floor in `DESCRIPTION` and `AGENTS.md` so later work honors it.
 
 ## Style axes to detect and record
 
