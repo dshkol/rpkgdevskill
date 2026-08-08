@@ -8,6 +8,10 @@ devtools::check_man()   # Documentation only
 devtools::test()        # Tests only
 ```
 
+`devtools::test()` loads the working tree. `devtools::check()` first builds a
+tarball and checks what will actually ship. This distinction is part of the
+correctness model, not release ceremony.
+
 ## Check Results
 
 - **ERROR**: Must fix. Package won't install.
@@ -34,7 +38,7 @@ devtools::test()        # Tests only
 | Using `T`/`F` instead of `TRUE`/`FALSE` | Spell out fully |
 | Non-ASCII characters | Use `\uXXXX` escapes in code |
 | `:::` usage | Request export or copy function |
-| `missing value where TRUE/FALSE needed` | Use `na.rm = TRUE` in `any()`, `all()` when input may contain NA |
+| `missing value where TRUE/FALSE needed` | Decide the NA policy: reject with `anyNA()`, propagate explicitly, or use `na.rm = TRUE` only when ignoring missingness is documented |
 
 > **CRITICAL for dplyr/tidyr users**: Using `.data$col` alone is NOT enough. You MUST also add `@importFrom rlang .data` to at least one function's roxygen comments, otherwise R CMD check will still fail with "no visible binding" notes.
 
@@ -127,7 +131,7 @@ This works but requires listing every column name, making it error-prone and har
 
 ```r
 # Set up GitHub Actions
-usethis::use_github_action_check_standard()
+usethis::use_github_action("check-standard")
 ```
 
 Checks on multiple platforms:
@@ -171,6 +175,25 @@ Creates/updates `.Rbuildignore`:
 ^_pkgdown\.yml$
 ^\.github$
 ```
+
+After changing `.Rbuildignore` or test fixtures, inspect the built tarball file
+list and run `devtools::check()`. Required shipped tests must not refer to
+build-ignored files. Keep external-runtime or live-reference validation in a
+development-only layer, and commit self-contained fixtures or derived expected
+values for the shipped suite; see [validation.md](validation.md).
+
+## Checks outside R CMD check
+
+Some integration failures occur only in adjacent build products:
+
+- Run `pkgdown::build_site()` when exports or `_pkgdown.yml` change. An exported
+  topic omitted from a hand-curated reference index can pass `R CMD check` and
+  still fail the site build.
+- Inspect CI annotations and workflow warnings even when the job is green;
+  deprecated actions and runtimes are maintenance failures with delayed impact.
+- When feature branches converge on `NAMESPACE`, `NEWS.md`, `_pkgdown.yml`, or
+  shared helpers, integrate in the intended order, rerun `devtools::document()`,
+  and test the combined tree. Never hand-merge generated `NAMESPACE` or `man/`.
 
 ## Environment Variables
 

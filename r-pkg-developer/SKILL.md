@@ -1,6 +1,6 @@
 ---
 name: r-pkg-developer
-description: Develop R packages following best practices with devtools, roxygen2, and testthat. Supports both tidyverse and base R coding styles. Use when creating new R packages, adding functions to packages, writing documentation, creating tests, managing dependencies, building vignettes, creating package websites with pkgdown, or preparing for CRAN submission. Triggers on R package development tasks, DESCRIPTION file editing, roxygen2 documentation, testthat testing, pkgdown website setup, or R CMD check issues.
+description: Develop and maintain R packages with devtools, roxygen2, and testthat in either tidyverse or base R style. Use when creating or modifying packages; implementing functions; managing documentation, tests, dependencies, data, vignettes, or pkgdown; diagnosing R CMD check or CI failures; validating ports and statistical or numerical methods; preserving API behavior through refactors and performance work; integrating feature branches; or preparing CRAN releases.
 ---
 
 # R Package Developer
@@ -20,9 +20,18 @@ re-guessing. Greenfield decides and **records**; brownfield reads and follows.
 - **Record conventions in `AGENTS.md`.** Generate it during setup; grow its
   Pitfalls section during maintenance. See
   [references/agents-file.md](references/agents-file.md).
+- **Match evidence to the package's claims.** When a function makes a
+  methodological or equivalence claim, declare its validation posture and
+  combine independent evidence. Ordinary utilities need contract tests, not a
+  methodological ledger. Never treat agreement with one implementation as
+  proof of correctness. See
+  [references/validation.md](references/validation.md).
 - **Working on an existing package?** Detect conventions from existing code and
   any `AGENTS.md`, and follow them — do not impose these defaults over a
   package's established style.
+- **Keep authority boundaries explicit.** Permission to implement locally does
+  not imply permission to push, merge, submit to CRAN, create releases or tags,
+  call remote builders, reset revdep state, or accept snapshot changes in bulk.
 
 ## Package Structure
 
@@ -141,6 +150,10 @@ devtools::check()  # Ctrl/Cmd + Shift + E
 # Fix all ERRORs and WARNINGs
 ```
 
+`devtools::test()` exercises the working tree. `devtools::check()` builds and
+checks the package artifact. Run both: files excluded by `.Rbuildignore` can
+make the first green while leaving shipped tests broken.
+
 ### 8. Install
 ```r
 devtools::install()
@@ -198,33 +211,15 @@ test_that("function does expected thing", {
 })
 
 test_that("function handles edge cases", {
-  # Snapshot errors/warnings so the full message is reviewable; prefer this over
-  # expect_error()/expect_warning(), which only match a fragment.
-  expect_snapshot(my_function(NULL), error = TRUE)
+  expect_error(my_function(NULL))
   expect_equal(my_function(numeric(0)), numeric(0))
 })
 ```
 
 Prefer a specific expectation over `expect_true()`/`expect_false()` — it gives a
-better failure message. See [references/testing.md](references/testing.md) for
-the full set of patterns (snapshots, mocking, helpers).
-
-## Quick Reference Commands
-
-| Task | Command | Shortcut |
-|------|---------|----------|
-| Load package | `devtools::load_all()` | Ctrl/Cmd+Shift+L |
-| Document | `devtools::document()` | Ctrl/Cmd+Shift+D |
-| Test (one file) | `devtools::test_active_file("R/name.R")` | |
-| Test (all) | `devtools::test()` | Ctrl/Cmd+Shift+T |
-| Format | `air format .` (shell) | |
-| Check | `devtools::check()` | Ctrl/Cmd+Shift+E |
-| Install | `devtools::install()` | |
-| New R file | `usethis::use_r("name")` | |
-| New test | `usethis::use_test("name")` | |
-| Add dependency | `usethis::use_package("pkg")` | |
-| Setup website | `usethis::use_pkgdown_github_pages()` | |
-| View help | `?function_name` | |
+better failure message. Snapshot a condition only when its complete wording is
+an intentional user-interface contract. See
+[references/testing.md](references/testing.md) for the full patterns.
 
 ## Detailed References
 
@@ -236,6 +231,7 @@ Consult these files for comprehensive guidance on specific topics:
 - **DESCRIPTION file**: See [references/description.md](references/description.md) for fields, dependencies, licensing
 - **Documentation**: See [references/documentation.md](references/documentation.md) for roxygen2 tags and patterns
 - **Testing**: See [references/testing.md](references/testing.md) for testthat expectations and patterns
+- **Validation**: See [references/validation.md](references/validation.md) for claim-driven evidence, oracle use, artifact tests, and refactoring regression nets
 - **Dependencies**: See [references/dependencies.md](references/dependencies.md) for Imports vs Suggests, NAMESPACE
 - **Data**: See [references/data.md](references/data.md) for including datasets
 - **Vignettes**: See [references/vignettes.md](references/vignettes.md) for long-form documentation
@@ -262,7 +258,7 @@ usethis::use_data_raw("dataset_name")
 ```r
 usethis::use_git()
 usethis::use_github()
-usethis::use_github_action_check_standard()
+usethis::use_github_action("check-standard")
 ```
 
 ### Add Package Website (Optional)
@@ -305,6 +301,9 @@ See [references/release.md](references/release.md) for the ordered runbook
    for base-flavored / minimal-dependency packages. Don't mix the two.
 8. **Follow a consistent style** - Conform to the recorded conventions; don't
    impose these defaults over a package's established style
+9. **Profile before optimizing** - Measure the released and development
+   implementations in isolated sessions, compare complete objects, and preserve
+   the public interface while removing demonstrated bottlenecks
 
 ## Handling NSE (If Using Tidyverse)
 
@@ -389,19 +388,27 @@ if (anyNA(x)) {
 method <- match.arg(method)  # Validates against function default values
 ```
 
-### NA-Safe Conditionals
+### NA policy comes before NA-safe syntax
 
-When checking conditions on vectors that might contain NA:
+Decide whether missing values are invalid, propagated, or deliberately ignored.
+Do not add `na.rm = TRUE` merely to silence an indeterminate condition:
 
 ```r
-# WRONG - fails if x contains NA
+# Reject missing values when the domain forbids them
+if (anyNA(x)) {
+  stop("`x` must contain complete values", call. = FALSE)
+}
 if (any(x == 0)) { ... }
 
-# CORRECT - handles NA safely
+# Ignore missing values only when that is the documented policy
 if (any(x == 0, na.rm = TRUE)) { ... }
 ```
 
-> **Important**: `any()` and `all()` return `NA` if the input contains `NA` values, which causes `if` statements to fail with "missing value where TRUE/FALSE needed". Always use `na.rm = TRUE` when the input might contain `NA`.
+Validate in an order that produces useful failures: type, shape, finiteness,
+domain, then structural properties. Reject degenerate-but-plausible inputs when
+the computation would otherwise return a confident but meaningless result.
+Name the likely mistake where possible (for example, "expects counts, not
+probabilities") instead of merely restating a predicate.
 
 ### Warning vs Error
 
@@ -416,40 +423,16 @@ Use `call. = FALSE` for cleaner error messages (omits the function call).
 > {.cls {class(x)}}."))`. Use whichever the package's `AGENTS.md` records, and
 > don't mix the two.
 
-## Base R Patterns
+## API and integration discipline
 
-If building a minimal-dependency package, these base R patterns avoid tidyverse dependencies.
-
-### Data Manipulation
-
-| Tidyverse | Base R Equivalent |
-|-----------|-------------------|
-| `dplyr::filter(df, x > 0)` | `df[df$x > 0, ]` or `subset(df, x > 0)` |
-| `dplyr::select(df, a, b)` | `df[, c("a", "b")]` |
-| `dplyr::mutate(df, y = x*2)` | `transform(df, y = x*2)` or `df$y <- df$x * 2` |
-| `purrr::map(x, fn)` | `lapply(x, fn)` |
-| `purrr::map_dbl(x, fn)` | `vapply(x, fn, numeric(1))` |
-
-### String Operations
-
-```r
-# Pattern matching
-grepl("pattern", x)
-gsub("old", "new", x)
-
-# Splitting
-strsplit(x, ",")[[1]]
-
-# Concatenation
-paste0("a", "b")
-sprintf("Value: %d", n)
-```
-
-### Advantages of Base R
-
-- Zero external dependencies
-- Stable across R versions
-- Easier CRAN maintenance
-- No NSE complexity
-
-See `test-packages/fullpkg/` for an example package using base R patterns.
+- Define public return classes, field names, and tidy result shapes before
+  multiplying methods. Make methods compose: a default method may accept a
+  documented primitive representation such as a matrix, but must validate it
+  rather than blindly coerce arbitrary input.
+- Treat `NAMESPACE`, `NEWS.md`, `_pkgdown.yml`, and shared test helpers as
+  expected integration points when combining feature branches. Integrate in
+  the intended order, regenerate `NAMESPACE` and `man/` from roxygen, then run
+  the combined suite and package check. Never hand-resolve generated files.
+- For performance work, profile first. Dispatch over many tiny groups is a
+  common R hot spot, but not a presumed diagnosis. Compare values, classes,
+  names, attributes, and printed/public behavior—not values alone.

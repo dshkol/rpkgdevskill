@@ -1,0 +1,4 @@
+interface:
+  display_name: "R Package Developer"
+  short_description: "Build and maintain production-ready R packages"
+  default_prompt: "Use $r-pkg-developer to implement and validate this R package change."

@@ -52,6 +52,8 @@ Guidance for agents working **on** this package (not for users calling it).
   native pipe and `\()` are available but the `_` placeholder is not>
 - Dependency policy: <e.g. "tidyverse-flavored, rlang/cli allowed" OR
   "zero recursive dependencies — do NOT add to Imports/Depends">
+- Validation posture: <only when methodological/equivalence claims warrant it;
+  replication | novel | mixed by applicable function>; ledger: <local path>
 
 ## Conventions
 <!-- The resolved taste choices, each with its reason. Edit a line to re-point
@@ -73,12 +75,18 @@ Guidance for agents working **on** this package (not for users calling it).
 - Document:        Rscript -e "devtools::document()"
 - Check:           Rscript -e "devtools::check()"
 - Format:          air format .
-- Release runbook: see references/release.md (only when actually releasing)
+- Release:         <package-local release command/checklist, if one exists>
 
 ## Source vs generated
 <!-- Never hand-edit the generated files. Edit the source and regenerate. -->
 - Generated (do not edit): NAMESPACE, man/*.Rd, README.md (from README.Rmd)
 - Edit the source instead:  roxygen comments -> man/; README.Rmd -> README.md
+- Build-ignored development files: <paths and why they are excluded>
+
+## Delivery
+- pkgdown: <CI deploys gh-pages | docs/ is built and committed locally | none>
+- Validation fixtures: <regeneration command, reference versions, ledger path>
+- Release cadence: <package policy>; CRAN state is checked at release time
 
 ## Changelog (NEWS.md)
 - One single-line bullet per user-facing change (no line wrapping).
@@ -97,9 +105,15 @@ Guidance for agents working **on** this package (not for users calling it).
   before writing — never ship the angle-bracket prompts.
 - **Only include sections that apply.** No NEWS.md in the package → drop the
   Changelog section rather than inventing rules for a file that doesn't exist.
+  No methodological or equivalence claim → omit the validation-posture and
+  fixture-ledger lines; ordinary contract testing does not require a ledger.
 - **Detect the toolchain for Commands.** testthat vs tinytest, `devtools` vs a
   `Makefile`, air vs styler — the command block must match what the package
   actually uses.
+- **Record operational facts, not guesses.** Determine whether pkgdown deploys
+  from CI or committed `docs/`, why development files are build-ignored, how
+  validation fixtures are regenerated, and what release cadence is intended.
+  A greenfield package must decide these before recording them.
 - **State the default in chat too.** When a convention was defaulted rather than
   detected, say so when you create the file ("defaulting to base-R style because
   there are zero Imports — say the word to switch"). Visible and reversible
@@ -132,6 +146,9 @@ When working on a package that already has an `AGENTS.md`:
 - **Grow the Pitfalls section.** When you hit a non-obvious gotcha (a resize
   bug, a load-order trap, a mocking constraint), append a bullet with a PR or
   issue reference so the next agent inherits the lesson.
+- **Keep validation claims current.** Update the posture ledger, reference
+  versions, fixture regeneration command, and any intentional divergence when
+  the implementation changes. See [validation.md](validation.md).
 - **Keep it honest.** If a convention changed, update the file in the same
   change — a stale `AGENTS.md` is worse than none, because it is trusted.
 
