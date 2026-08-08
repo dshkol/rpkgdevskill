@@ -135,44 +135,23 @@ Checks on multiple platforms:
 - macOS (latest R)
 - Ubuntu (latest R, R-devel, R-oldrel)
 
-## Pre-CRAN Checklist
+## Check During Development
+
+For routine work, `devtools::check()` is the gate — keep it clean before calling
+a change done. Narrower checks give faster feedback while iterating:
 
 ```r
-# Final checks before submission
-devtools::check(remote = TRUE, manual = TRUE)
-
-# Check reverse dependencies (if updating)
-revdepcheck::revdep_check()
-
-# Spell check
-spelling::spell_check_package()
-
-# URL validation
-urlchecker::url_check()
+devtools::check()       # full check (Ctrl/Cmd + Shift + E)
+devtools::check_man()   # documentation only
+devtools::test()        # tests only
 ```
 
-## Check Workflow
+## Releasing
 
-```r
-# 1. Quick check during development
-devtools::check()
-
-# 2. Check documentation specifically
-devtools::check_man()
-
-# 3. Run tests
-devtools::test()
-
-# 4. Full check before release
-devtools::check(cran = TRUE)
-
-# 5. Check on win-builder
-devtools::check_win_devel()
-devtools::check_win_release()
-
-# 6. Submit to CRAN
-devtools::release()
-```
+The full release procedure — `check(cran = TRUE)`, win-builder, reverse
+dependency checks, `cran-comments.md`, and submission — is a separate, ordered
+runbook. See [release.md](release.md). Most changes are *not* releases and don't
+need any of it.
 
 ## Ignoring Files
 

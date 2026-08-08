@@ -51,18 +51,35 @@ expect_false(is.null(x))
 expect_null(result)
 ```
 
+> **Prefer a specific expectation over `expect_true()`/`expect_false()`.** A
+> specific expectation gives a far better failure message: `expect_gt(x, 0)`
+> reports the actual value, whereas `expect_true(x > 0)` only says `FALSE is not
+> TRUE`. Reach for `expect_equal()`, `expect_gt()`, `expect_type()`,
+> `expect_length()`, etc. first.
+
 ### Errors and Warnings
+
+**Prefer snapshots for errors and warnings.** `expect_snapshot(error = TRUE)`
+records the *full* message for review, so the wording stays under test and
+regressions in message quality are caught. `expect_error(fn(), "fragment")` only
+matches a substring and silently tolerates the rest of the message drifting.
+
 ```r
-expect_error(stop("oops"))
+expect_snapshot(my_fun(-1), error = TRUE)   # errors — full message recorded
+expect_snapshot(warn_fun())                 # warnings/messages — output recorded
+```
+
+Match on a condition **class** (stable) rather than message text when you only
+need to assert the *kind* of failure:
+
+```r
 expect_error(bad_input(), class = "error_class")
-expect_error(my_fun(-1), "must be positive")
-
-expect_warning(warn_fun())
-expect_message(message_fun())
-
 expect_no_error(good_input())
 expect_no_warning(clean_fun())
 ```
+
+Avoid `expect_error(fn(), "some text")` — message text is brittle and a snapshot
+documents it better.
 
 ### Object Properties
 ```r
@@ -143,6 +160,35 @@ make_test_data <- function() {
 }
 ```
 
+> **Never put top-level code in a `test-*.R` file outside a `test_that()`
+> block.** Shared objects and helpers belong in `helper.R` / `helper-*.R` (or
+> `setup.R`), not loose in a test file.
+
+## Mocking
+
+Use `testthat::local_mocked_bindings()` to replace a binding for the duration of
+a test:
+
+```r
+test_that("handles API failure", {
+  local_mocked_bindings(fetch_data = function(...) stop("network down"))
+  expect_snapshot(get_records(), error = TRUE)
+})
+```
+
+> **Avoid the `.package` argument to `local_mocked_bindings()`.** It reaches into
+> another package's namespace, which is poor practice and fragile. Instead, wrap
+> the external call in a small mockable function *in your own package* and mock
+> that. See `?local_mocked_bindings`.
+
+```r
+# In your package: a thin, mockable wrapper
+get_time <- function() Sys.time()
+
+# In a test: mock your wrapper, not base::Sys.time
+local_mocked_bindings(get_time = function() as.POSIXct("2026-01-01"))
+```
+
 ## Skip Tests
 
 ```r
@@ -169,15 +215,15 @@ skip_if(condition, "reason")
 
 ## Running Tests
 
+Narrow to the **tightest loop** that exercises your change; run the full suite
+only before finishing. Widen one rung at a time:
+
 ```r
-# All tests
-devtools::test()           # Ctrl/Cmd + Shift + T
-
-# Single file
-testthat::test_file("tests/testthat/test-foofy.R")
-
-# Active file in RStudio
-devtools::test_active_file()   # Ctrl/Cmd + T
+# Tightest → widest
+devtools::test_active_file("R/foofy.R", desc = "handles NA")  # single test
+devtools::test_active_file("R/foofy.R")                       # one file
+devtools::test(filter = "^foofy")                             # files by prefix
+devtools::test()                                              # whole suite (Ctrl/Cmd+Shift+T)
 ```
 
 ## Test Coverage
@@ -220,7 +266,9 @@ test_that("add() handles NA", {
 })
 
 test_that("add() errors on non-numeric", {
+  # Class match for the *kind* of failure; snapshot for the message wording.
   expect_error(add("a", 1), class = "error_non_numeric")
+  expect_snapshot(add("a", 1), error = TRUE)
 })
 
 test_that("add() output has correct structure", {

@@ -7,6 +7,23 @@ description: Develop R packages following best practices with devtools, roxygen2
 
 Build R packages following modern best practices using the devtools ecosystem.
 
+## Working principle: provision for agentic maintainability
+
+Setting up a package well is not just about structure — it is about leaving
+decisions in a form the next agent (or contributor) can follow instead of
+re-guessing. Greenfield decides and **records**; brownfield reads and follows.
+
+- **Agnostic on taste, ruthless on consistency and correctness.** The skill has
+  no opinion on `<-` vs `=`, pipe or not, tidyverse or base — but whatever is
+  chosen is recorded, followed without mixing, and valid on the package's R
+  floor. See [references/conventions.md](references/conventions.md).
+- **Record conventions in `AGENTS.md`.** Generate it during setup; grow its
+  Pitfalls section during maintenance. See
+  [references/agents-file.md](references/agents-file.md).
+- **Working on an existing package?** Detect conventions from existing code and
+  any `AGENTS.md`, and follow them — do not impose these defaults over a
+  package's established style.
+
 ## Package Structure
 
 ```
@@ -27,17 +44,40 @@ mypackage/
 ├── vignettes/           # Long-form documentation (.Rmd)
 ├── _pkgdown.yml         # Optional: website configuration
 ├── docs/                # Generated website (if building locally)
-├── .Rbuildignore        # Files to exclude from package
+├── NEWS.md              # User-facing changelog (one bullet per change)
+├── AGENTS.md            # Conventions/commands/pitfalls for agents (gitignore-free, build-ignored)
+├── CLAUDE.md            # One-line shim: "See @AGENTS.md"
+├── .Rbuildignore        # Files to exclude from package (must list AGENTS.md, CLAUDE.md, .claude)
 └── .gitignore           # Files to exclude from git
 ```
 
 ## Core Development Workflow
+
+### 0. Resolve conventions and scaffold AGENTS.md
+
+Before writing code, settle the package's conventions (see
+[references/conventions.md](references/conventions.md)) and record them.
+
+- **Existing package**: detect style from `R/*.R` and read any `AGENTS.md`;
+  follow what you find.
+- **New package**: pick constraint-derived defaults (zero-dependency utility →
+  base-flavored; tidyverse wrapper → tidyverse-flavored), **state the pick in
+  one line**, and write it into `AGENTS.md` where the user can override it.
+  Don't interrogate — bias to zero questions; the default is visible and
+  reversible.
+
+```r
+# Record conventions + commands for future agents, then keep them out of the build
+# (write AGENTS.md + a one-line CLAUDE.md shim per references/agents-file.md)
+usethis::use_build_ignore(c("AGENTS.md", "CLAUDE.md", ".claude"))
+```
 
 ### 1. Create Package
 ```r
 usethis::create_package("path/to/mypackage")
 usethis::use_git()
 usethis::use_mit_license("Your Name")  # REQUIRED - run this immediately!
+usethis::use_air()                     # Set up the air formatter (air.toml)
 ```
 
 > **Important**: The license step is required, not optional. The DESCRIPTION template shows a placeholder - you must run `use_mit_license()` or `use_gpl3_license()` to set an actual license, or R CMD check will fail.
@@ -70,19 +110,38 @@ devtools::load_all()  # Ctrl/Cmd + Shift + L
 
 ### 5. Add Tests
 ```r
-usethis::use_testthat()     # First time only
+usethis::use_testthat(3)    # First time only (edition 3 enables snapshot tests)
 usethis::use_test("function_name")
-# Write tests, then:
-devtools::test()  # Ctrl/Cmd + Shift + T
 ```
 
-### 6. Check Package
+Then narrow to the **tightest loop** that covers your change — run the whole
+suite only before finishing:
+
+```r
+devtools::test_active_file("R/function_name.R", desc = "specific test")  # single test
+devtools::test_active_file("R/function_name.R")                          # one file
+devtools::test(filter = "^function_name")                                # files by prefix
+devtools::test()                                                         # whole suite
+```
+
+### 6. Format and record the change
+```r
+# Always format after generating code (air.toml drives the rules)
+# air format .
+```
+
+For every **user-facing** change, add a single-line bullet to `NEWS.md`
+(function name early, issue number in parens; no line wrapping; alphabetical by
+function). Skip internal refactors, small doc fixes, and fixes to unreleased
+dev bugs.
+
+### 7. Check Package
 ```r
 devtools::check()  # Ctrl/Cmd + Shift + E
 # Fix all ERRORs and WARNINGs
 ```
 
-### 7. Install
+### 8. Install
 ```r
 devtools::install()
 ```
@@ -103,15 +162,17 @@ devtools::install()
 #' @export
 #' @examples
 #' my_function(1, 2)
-#'
-#' # With pipe
-#' data |> my_function()
 my_function <- function(x, y = NULL) {
   # Implementation
 }
 ```
 
 For internal functions (not exported), omit `@export`.
+
+> **Pipe in examples is floor-gated.** `data |> my_function()` only runs on
+> R >= 4.1. If the package's floor is lower, use `my_function(data)` or `%>%`
+> (only if magrittr is a dependency). See
+> [references/conventions.md](references/conventions.md).
 
 ## Adding Dependencies
 
@@ -137,10 +198,16 @@ test_that("function does expected thing", {
 })
 
 test_that("function handles edge cases", {
-  expect_error(my_function(NULL), "must not be NULL")
+  # Snapshot errors/warnings so the full message is reviewable; prefer this over
+  # expect_error()/expect_warning(), which only match a fragment.
+  expect_snapshot(my_function(NULL), error = TRUE)
   expect_equal(my_function(numeric(0)), numeric(0))
 })
 ```
+
+Prefer a specific expectation over `expect_true()`/`expect_false()` — it gives a
+better failure message. See [references/testing.md](references/testing.md) for
+the full set of patterns (snapshots, mocking, helpers).
 
 ## Quick Reference Commands
 
@@ -148,7 +215,9 @@ test_that("function handles edge cases", {
 |------|---------|----------|
 | Load package | `devtools::load_all()` | Ctrl/Cmd+Shift+L |
 | Document | `devtools::document()` | Ctrl/Cmd+Shift+D |
-| Test | `devtools::test()` | Ctrl/Cmd+Shift+T |
+| Test (one file) | `devtools::test_active_file("R/name.R")` | |
+| Test (all) | `devtools::test()` | Ctrl/Cmd+Shift+T |
+| Format | `air format .` (shell) | |
 | Check | `devtools::check()` | Ctrl/Cmd+Shift+E |
 | Install | `devtools::install()` | |
 | New R file | `usethis::use_r("name")` | |
@@ -161,6 +230,9 @@ test_that("function handles edge cases", {
 
 Consult these files for comprehensive guidance on specific topics:
 
+- **Conventions**: See [references/conventions.md](references/conventions.md) for detecting, defaulting, and recording style; the R-floor → syntax gating table
+- **AGENTS.md**: See [references/agents-file.md](references/agents-file.md) for scaffolding and maintaining the agent-guidance file
+- **Releasing**: See [references/release.md](references/release.md) for the tiered routine-change vs CRAN-release workflow
 - **DESCRIPTION file**: See [references/description.md](references/description.md) for fields, dependencies, licensing
 - **Documentation**: See [references/documentation.md](references/documentation.md) for roxygen2 tags and patterns
 - **Testing**: See [references/testing.md](references/testing.md) for testthat expectations and patterns
@@ -204,12 +276,21 @@ pkgdown::build_site()  # Preview locally
 ```
 
 ### Prepare for CRAN
+
+Most changes are *not* releases — the routine inner loop (edit → format → test →
+document → NEWS → check) is enough. Reach for the full release procedure only
+when actually shipping to CRAN:
+
 ```r
 devtools::check(cran = TRUE)
 devtools::check_win_devel()
 spelling::spell_check_package()
+revdepcheck::revdep_check()   # if the package has reverse dependencies
 devtools::release()
 ```
+
+See [references/release.md](references/release.md) for the ordered runbook
+(version bump, NEWS migration, revdep, win-builder, cran-comments, submit, tag).
 
 ## Best Practices
 
@@ -219,8 +300,11 @@ devtools::release()
 4. **Use explicit namespacing** - Always `pkg::fun()` instead of importing whole packages
 5. **Keep functions focused** - One function should do one thing well
 6. **Minimize dependencies** - Only add packages you truly need
-7. **Write helpful error messages** - Use `rlang::abort()` with clear descriptions
-8. **Follow a consistent style** - Use `snake_case` for functions and variables
+7. **Write helpful error messages** - Match the package's recorded error style:
+   `cli::cli_abort()` for tidyverse-flavored packages, `stop(..., call. = FALSE)`
+   for base-flavored / minimal-dependency packages. Don't mix the two.
+8. **Follow a consistent style** - Conform to the recorded conventions; don't
+   impose these defaults over a package's established style
 
 ## Handling NSE (If Using Tidyverse)
 
@@ -325,6 +409,12 @@ if (any(x == 0, na.rm = TRUE)) { ... }
 - **`warning()`**: Edge cases that produce valid but unexpected results
 
 Use `call. = FALSE` for cleaner error messages (omits the function call).
+
+> **The examples above are base-flavored** (`stop(call. = FALSE)`, zero
+> dependencies). A tidyverse-flavored package signals the same conditions with
+> `cli::cli_abort(c("`x` must be a numeric vector.", "x" = "You supplied
+> {.cls {class(x)}}."))`. Use whichever the package's `AGENTS.md` records, and
+> don't mix the two.
 
 ## Base R Patterns
 
