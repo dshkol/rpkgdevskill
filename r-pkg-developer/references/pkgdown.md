@@ -230,6 +230,17 @@ footer:
 
 ## Deployment Workflow
 
+First determine and record the repository's deployment mode:
+
+- **CI-managed `gh-pages`**: the workflow builds and deploys the site; generated
+  `docs/` is not a source artifact on the default branch.
+- **Committed `docs/`**: the maintainer builds locally and commits the generated
+  site; CI may verify it but must not silently publish a different artifact.
+
+Do not infer the mode merely from the presence of `_pkgdown.yml`. Record it in
+`AGENTS.md` so later work does not overwrite or fail to update the published
+site.
+
 ### Automatic (GitHub Actions)
 
 After `use_pkgdown_github_pages()`:
@@ -293,6 +304,8 @@ This keeps site updates separate from package checks.
 **Reference index shows wrong groupings:**
 - Run `pkgdown::build_reference_index()` after editing `_pkgdown.yml`
 - Check function names match exactly (case-sensitive)
+- When adding or exporting a function, add it to a hand-curated `reference:`
+  index in the same change. `R CMD check` does not validate this integration.
 
 **Site not updating on GitHub:**
 - Verify GitHub Pages is enabled in repository settings

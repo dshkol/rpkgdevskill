@@ -41,7 +41,7 @@ test_that("can handle edge cases", {
 ```r
 expect_equal(actual, expected)           # With numeric tolerance
 expect_identical(actual, expected)       # Exact match
-expect_equivalent(actual, expected)      # Ignore attributes
+expect_equal(actual, expected, ignore_attr = TRUE) # Deliberately ignore attributes
 ```
 
 ### Logical
@@ -59,14 +59,13 @@ expect_null(result)
 
 ### Errors and Warnings
 
-**Prefer snapshots for errors and warnings.** `expect_snapshot(error = TRUE)`
-records the *full* message for review, so the wording stays under test and
-regressions in message quality are caught. `expect_error(fn(), "fragment")` only
-matches a substring and silently tolerates the rest of the message drifting.
+Use a condition class when the failure category is the contract. Add a snapshot
+only when the complete wording is intentional user-facing behavior worth
+reviewing. Do not snapshot every condition by default.
 
 ```r
-expect_snapshot(my_fun(-1), error = TRUE)   # errors — full message recorded
-expect_snapshot(warn_fun())                 # warnings/messages — output recorded
+expect_error(my_fun(-1), class = "mypkg_invalid_argument")
+expect_snapshot(my_fun(-1), error = TRUE) # only if wording is also contractual
 ```
 
 Match on a condition **class** (stable) rather than message text when you only
@@ -78,8 +77,7 @@ expect_no_error(good_input())
 expect_no_warning(clean_fun())
 ```
 
-Avoid `expect_error(fn(), "some text")` — message text is brittle and a snapshot
-documents it better.
+Avoid treating a convenient message fragment as the behavioral contract.
 
 ### Object Properties
 ```r
@@ -115,10 +113,10 @@ test_that("output format is correct", {
 
 Creates `tests/testthat/_snaps/test-file.md` with recorded output.
 
-Review/accept snapshots:
+Review snapshots individually. Never run a blanket accept merely to make a
+suite green:
 ```r
-testthat::snapshot_review()    # Interactive review
-testthat::snapshot_accept()    # Accept all changes
+testthat::snapshot_review()    # Inspect each semantic change
 ```
 
 Snapshot variants:
@@ -226,6 +224,29 @@ devtools::test(filter = "^foofy")                             # files by prefix
 devtools::test()                                              # whole suite (Ctrl/Cmd+Shift+T)
 ```
 
+The full suite still targets the working tree. Finish with
+`devtools::check()` so tests run from the built package after `.Rbuildignore`
+has been applied. Read [validation.md](validation.md) whenever fixtures,
+cross-language checks, or generated reference values are involved.
+
+## Method and implementation validation
+
+For functions that make methodological, numerical, statistical, or equivalence
+claims, choose tests from the claim rather than a generic coverage target:
+
+- Replications need credible equivalence checks plus independently specified
+  invariants and special cases.
+- Novel methods need definition-derived cases and simulation of known behavior.
+- Deliberate departures need a minimal, version-bounded divergence test.
+- Refactors need complete-object comparisons against an isolated install of the
+  latest release, relevant tag, or recorded baseline commit; compare attributes
+  and classes, not values alone.
+
+For ordinary utilities, test the documented input/output and condition
+contracts without creating a methodological posture ledger.
+
+See [validation.md](validation.md) for the evidence model and fixture layout.
+
 ## Test Coverage
 
 ```r
@@ -244,7 +265,8 @@ covr::report()
 1. **One concept per test** - Test one behavior in each `test_that()`
 2. **Descriptive names** - Test names should read like sentences
 3. **Mirror R/ structure** - `R/foo.R` → `tests/testthat/test-foo.R`
-4. **Test edge cases** - Empty input, NA values, wrong types
+4. **Test edge cases** - Empty, missing, non-finite, boundary, and structurally
+   degenerate inputs according to the documented domain
 5. **Test errors** - Verify functions fail appropriately
 6. **Use fixtures** - Avoid duplicating test setup
 7. **Keep tests fast** - Slow tests discourage running them

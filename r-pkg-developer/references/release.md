@@ -2,6 +2,10 @@
 
 Not every change is a release. Match the ceremony to the change — most work is
 the inner loop, dev housekeeping is occasional, and a CRAN submission is rare.
+CRAN policy and release tooling change: verify the current
+[CRAN Repository Policy](https://cran.r-project.org/web/packages/policies.html)
+and the current [R Packages release workflow](https://r-pkgs.org/release.html)
+before a submission.
 
 ## Tier 1 — routine change (the common case)
 
@@ -25,16 +29,30 @@ when you want to mark a development milestone or signal a breaking change to
 users tracking the dev version. The user-facing version stays untouched until
 release.
 
+CRAN asks maintainers to space ordinary updates roughly one or two months
+apart. Fold thin, non-urgent patches into the next substantive release; urgent
+compatibility or correctness fixes still justify a prompt patch, explained in
+`cran-comments.md` when unusually close to the previous submission.
+
 ## Tier 3 — CRAN release runbook
 
 Run this ordered procedure only when actually submitting to CRAN.
 
 ### 1. Start from green
 ```r
-update.packages(ask = FALSE)  # avoid masking failures that surface in CI
 devtools::test()              # fast feedback
-devtools::check()             # must be 0 errors | 0 warnings | 0 notes
+devtools::check()             # 0 errors, 0 warnings; resolve or explain notes
 ```
+
+Do not run `update.packages()` against the maintainer's global library. Use the
+package's lockfile or an isolated release library, then update dependencies
+deliberately. Query CRAN for the currently published version and inspect its
+current check results; do not infer either from local tags or `DESCRIPTION`.
+
+Before changing release state, start from a clean tree. Remote builders, CRAN
+submission, GitHub releases/tags, pushes, and destructive revdep cleanup cross
+external or destructive boundaries: an agent must obtain the user's
+authorization before performing them.
 
 ### 2. Bump the version
 Set `Version:` in `DESCRIPTION` to the release version and **drop the `.9000`
@@ -48,7 +66,7 @@ the submission date.
 
 ### 4. Reverse dependency checks (if the package has revdeps)
 ```r
-revdepcheck::revdep_reset()              # ALWAYS reset a prior run first
+revdepcheck::revdep_reset()              # destructive: confirm before running
 revdepcheck::revdep_check(num_workers = 4)
 ```
 Results land in `revdep/README.md`. Pre-existing errors present in *both* old
@@ -68,9 +86,15 @@ spelling::spell_check_package()
 urlchecker::url_check()
 ```
 
+Also rebuild README and pkgdown when their sources, exports, or reference index
+changed. Audit `DESCRIPTION`, `NEWS.md`, `README`, `_pkgdown.yml`,
+`cran-comments.md`, and workflow annotations as one release surface. Only list
+test environments in `cran-comments.md` that were freshly run for this release
+candidate.
+
 ### 7. cran-comments.md
-Populate with submission notes, test environments, the `0 errors | 0 warnings
-| 0 notes` result, and the revdep summary:
+Populate with submission notes, test environments, the actual check result, an
+explanation for every remaining NOTE, and the revdep summary:
 
 ```markdown
 ## Submission
@@ -80,7 +104,9 @@ Populate with submission notes, test environments, the `0 errors | 0 warnings
 - <CI / local / win-builder environments>
 
 ## R CMD check results
-0 errors | 0 warnings | 0 notes
+0 errors | 0 warnings | <N> notes
+
+* <Explain each remaining NOTE; omit this bullet when N is zero.>
 
 ## revdepcheck results
 We checked N reverse dependencies, comparing R CMD check results across the
@@ -90,13 +116,25 @@ CRAN and dev versions.
 ```
 
 ### 8. Submit
+
+Commit the finalized release candidate locally and verify that the working tree
+is clean. The submitted SHA must include the version, NEWS, documentation, and
+release metadata changes above.
+
 ```r
 devtools::submit_cran()   # or devtools::release() for the guided flow
 ```
 
+Preserve the generated `CRAN-SUBMISSION` file while the submission is pending.
+It records the submitted version and exact SHA, so no earlier manual SHA record
+is authoritative. The file is build-ignored and ephemeral, but should not be
+committed or casually deleted.
+
 ### 9. Post-acceptance
-- Create a GitHub release tagged `v<x.y.z>`.
-- Bump `DESCRIPTION` to the next dev version (`<next>.9000`) and commit.
+- Run `usethis::use_github_release()` so the GitHub release tags the exact SHA
+  recorded in `CRAN-SUBMISSION`; successful release creation removes that file.
+- Bump `DESCRIPTION` to the next dev version (`<next>.9000`), commit, and push.
+- Revisit CRAN check results after binaries and additional flavors finish.
 
 ## Common CRAN gotchas
 
@@ -108,9 +146,12 @@ devtools::submit_cran()   # or devtools::release() for the guided flow
   index while satisfying the check.
 - **Broken URLs.** win-builder validates URLs; fix dead links pre-submission.
 - **Stale revdep run.** Always `revdep_reset()` before `revdep_check()`.
-- **Tests bloating the tarball.** If snapshot artifacts are large, exclude the
-  test directory from the build tarball at submission time and restore it after
-  so CI keeps running the suite.
+- **Development validation in the tarball.** Keep large raw fixtures, live
+  reference checks, and generation scripts build-ignored, but ship
+  self-contained tests and the small fixtures needed to support public
+  correctness claims.
+- **Tagging the wrong commit.** Do not hand-tag whichever commit is current
+  after acceptance; use the SHA recorded at submission time.
 
 ## Acceptable vs fixable NOTEs
 
