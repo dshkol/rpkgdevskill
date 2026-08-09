@@ -117,6 +117,13 @@ This matters especially when replacing grouped data workflows: a rewrite can
 be numerically identical while dropping S3 classes, grouping metadata, or
 custom attributes.
 
+Include representative subclasses and adversarial dispatch in the net when a
+public contract accepts a parent S3 class. Compatibility includes which generic
+methods run, whether inputs are copied or mutated, and whether fast and general
+paths produce the same conditions. Share parsing and validation helpers across
+those paths when they promise the same contract; duplicated validation is a
+drift risk.
+
 ## Validate failures as part of the method
 
 Validate inputs in this order when applicable: type, shape, finiteness, domain,

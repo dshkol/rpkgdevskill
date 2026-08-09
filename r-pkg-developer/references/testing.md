@@ -88,6 +88,11 @@ expect_length(vec, 10)
 expect_named(list(a = 1), "a")
 ```
 
+Do not use a class assertion as a substitute for a value assertion. For a
+classed value, check at least one representative value plus the class and any
+contractual attributes; a preserved `Date` class can still contain the wrong
+date.
+
 ### Pattern Matching
 ```r
 expect_match(string, "pattern")
@@ -147,6 +152,23 @@ test_that("file operations work", {
 Create `tests/testthat/helper.R` for shared setup code.
 
 Create `tests/testthat/setup.R` for setup that runs once per test file.
+
+### Dispatch and global-state fixtures
+
+When an API accepts a broad S3 class such as `data.frame`, test at least one
+subclass if the implementation extracts, subsets, coerces, or mutates it.
+`is.data.frame(x)` includes tibbles, `data.table`, and custom subclasses whose
+`[` method may not behave like `[.data.frame`. A small hostile fixture that
+overrides the operation under test exposes accidental dispatch assumptions.
+Use the narrowest primitive that matches the contract—for example `x[[name]]`
+for one column when data-frame subsetting semantics are not required—and still
+test the general fallback.
+
+Register cleanup immediately after changing process-wide state: S3 method
+tables, options, environment variables, locales, working directories, search
+paths, or global bindings. Prefer `withr::defer()`/`local_*()`; otherwise use
+`on.exit(..., add = TRUE)`. Cleanup must run even when the first expectation
+fails, and the test should not leak state into later tests.
 
 ## Test Helpers
 
