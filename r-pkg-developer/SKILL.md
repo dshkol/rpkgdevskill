@@ -436,3 +436,18 @@ Use `call. = FALSE` for cleaner error messages (omits the function call).
 - For performance work, profile first. Dispatch over many tiny groups is a
   common R hot spot, but not a presumed diagnosis. Compare values, classes,
   names, attributes, and printed/public behavior—not values alone.
+- Treat accepted S3 parent classes as a dispatch surface. Before replacing a
+  general path with narrower extraction or mutation, test representative and
+  hostile subclasses; read [references/testing.md](references/testing.md) for
+  the fixture and cleanup pattern.
+
+## PR hardening loop
+
+Before handing off a material diff, perform one cold review of the complete
+change under correctness, security, performance, and maintainability. Verify
+each finding against the current code; review tools produce hypotheses, not
+instructions. Fix supported findings, reject low-value suggestions with a
+technical reason, rerun focused tests plus the full suite and package check,
+then review the resulting diff once more for regressions introduced by the
+fixes. Re-run generated artifacts or benchmarks whenever a review commit makes
+their recorded evidence stale.
